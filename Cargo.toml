@@ -2,11 +2,11 @@
 name = "rsomics-seqio"
 version = "0.1.1"
 description = "Fast FASTQ reader for the rsomics-* tool family: decode-only producer thread + parallel parse, ISA-L igzip gz backend on Linux and a pure-Rust decoder elsewhere. Layer A primitive."
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-repository.workspace = true
-authors.workspace = true
+edition = "2024"
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/omics-rust/rsomics-world"
+authors = ["Zane Leong <efd@live.com>"]
 categories = ["science"]
 keywords = ["fastq", "bioinformatics", "bgzf", "gzip", "reader"]
 readme = "README.md"
@@ -17,28 +17,26 @@ readme = "README.md"
 # Apple's assembler). No feature knob → `--all-features` cannot accidentally
 # disable the igzip path on Linux.
 [dependencies]
-rsomics-common = { path = "../rsomics-common", version = "0.6" }
+rsomics-common = { version = "0.6" }
 # Non-Linux gz backend (Quadrant ①: pure Rust, zlib-rs); also the dev/bench
 # reference decoder.
-flate2 = { workspace = true }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 crossbeam-channel = "0.5"
 # Parallel slab parsing: each raw-byte slab is parsed into OwnedRecords across
 # the rayon thread pool so record allocation is off the single reader thread.
-rayon = { workspace = true }
+rayon = "1"
 
 # Linux gz backend: the isolated Quadrant-② FFI crate wrapping ISA-L igzip.
 # All unsafe is contained in rsomics-igzip; this crate stays 100% safe.
 [target.'cfg(target_os = "linux")'.dependencies]
-rsomics-igzip = { path = "../rsomics-igzip", version = "0.1" }
+rsomics-igzip = { version = "0.1" }
 
 [dev-dependencies]
 tempfile = "3"
-criterion = { workspace = true }
-flate2 = { workspace = true }
+criterion = { version = "0.7", default-features = false, features = ["cargo_bench_support"] }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 
 [[bench]]
 name = "seqio_gz"
 harness = false
 
-[lints]
-workspace = true
