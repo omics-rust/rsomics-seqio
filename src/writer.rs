@@ -399,4 +399,20 @@ mod tests {
             Err(RsomicsError::Io(_))
         ));
     }
+
+    #[test]
+    fn gzip_writer_propagates_finish_sink_failure() {
+        let mut writer = Writer::gzip(FailingSink, Format::Fastq, 4).unwrap();
+        writer
+            .write_record(Record {
+                id: b"one",
+                seq: b"ACGT",
+                qual: Some(b"IIII"),
+            })
+            .unwrap();
+        assert!(matches!(
+            writer.finish_into_inner(),
+            Err(RsomicsError::Io(_))
+        ));
+    }
 }
