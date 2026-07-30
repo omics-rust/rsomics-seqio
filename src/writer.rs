@@ -6,7 +6,7 @@ use flate2::Compression as FlateCompression;
 use flate2::write::GzEncoder;
 use rsomics_common::{Result, RsomicsError};
 
-use crate::record::{is_valid_header_byte, is_valid_quality_byte, is_valid_sequence_byte};
+use crate::record::{are_valid_printable_bytes, is_valid_header_byte};
 use crate::{Compression, Format, OwnedRecord, Record};
 
 const BUFFER_CAPACITY: usize = 256 * 1024;
@@ -147,12 +147,7 @@ fn validate_record(record: Record<'_>, format: Format) -> Result<()> {
             "sequence identifier contains an invalid byte".into(),
         ));
     }
-    if record
-        .seq
-        .iter()
-        .copied()
-        .any(|byte| !is_valid_sequence_byte(byte))
-    {
+    if !are_valid_printable_bytes(record.seq) {
         return Err(RsomicsError::InvalidInput(
             "sequence contains a byte outside printable non-space ASCII 33..=126".into(),
         ));
@@ -184,11 +179,7 @@ fn validate_record(record: Record<'_>, format: Format) -> Result<()> {
                     quality.len()
                 )));
             }
-            if quality
-                .iter()
-                .copied()
-                .any(|byte| !is_valid_quality_byte(byte))
-            {
+            if !are_valid_printable_bytes(quality) {
                 return Err(RsomicsError::InvalidInput(
                     "FASTQ quality contains a byte outside ASCII 33..=126".into(),
                 ));

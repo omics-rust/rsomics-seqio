@@ -2,7 +2,7 @@ use std::io::BufRead;
 
 use rsomics_common::{Result, RsomicsError};
 
-use crate::record::{is_valid_header_byte, is_valid_quality_byte, is_valid_sequence_byte};
+use crate::record::{are_valid_printable_bytes, is_valid_header_byte};
 use crate::{Format, Record};
 
 const BUFFER_CAPACITY: usize = 64 * 1024;
@@ -267,11 +267,7 @@ fn validate_header(bytes: &[u8], line: u64) -> Result<()> {
 }
 
 fn validate_sequence(bytes: &[u8], line: u64) -> Result<()> {
-    if bytes
-        .iter()
-        .copied()
-        .any(|byte| !is_valid_sequence_byte(byte))
-    {
+    if !are_valid_printable_bytes(bytes) {
         return Err(invalid_at(
             line,
             "sequence contains a byte outside printable non-space ASCII 33..=126",
@@ -281,11 +277,7 @@ fn validate_sequence(bytes: &[u8], line: u64) -> Result<()> {
 }
 
 fn validate_quality(bytes: &[u8], line: u64) -> Result<()> {
-    if bytes
-        .iter()
-        .copied()
-        .any(|byte| !is_valid_quality_byte(byte))
-    {
+    if !are_valid_printable_bytes(bytes) {
         return Err(invalid_at(
             line,
             "FASTQ quality contains a byte outside ASCII 33..=126",
