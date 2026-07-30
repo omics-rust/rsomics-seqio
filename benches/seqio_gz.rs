@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use rsomics_seqio::open_fastq;
+use rsomics_seqio::open_path;
 
 fn make_gz_fixture(n_records: usize) -> tempfile::NamedTempFile {
     let mut fq = Vec::with_capacity(n_records * 60);
@@ -33,8 +33,8 @@ fn bench_gz_decode(c: &mut Criterion) {
     c.bench_function("gz_decode_100k_records", |b| {
         b.iter(|| {
             let mut count: usize = 0;
-            for r in open_fastq(&path).unwrap() {
-                r.unwrap();
+            let mut reader = open_path(&path).unwrap();
+            while reader.read_record().unwrap().is_some() {
                 count += 1;
             }
             assert_eq!(count, 100_000);
