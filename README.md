@@ -76,6 +76,9 @@ Third-party license metadata:
 
 ## Compatibility
 
+Version 0.3 adopts the `rsomics-common` 0.7 error contract. Its record and I/O
+APIs retain the version 0.2 behavior described below.
+
 Version 0.2 is an intentional source-breaking redesign and does not claim 0.1
 API compatibility:
 
