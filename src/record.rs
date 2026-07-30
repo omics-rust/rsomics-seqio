@@ -42,7 +42,7 @@ pub struct LegacyFastqRecord {
 }
 
 pub(crate) fn is_valid_header_byte(byte: u8) -> bool {
-    (b' '..=b'~').contains(&byte)
+    byte == b'\t' || (b' '..=b'~').contains(&byte)
 }
 
 pub(crate) fn is_valid_sequence_byte(byte: u8) -> bool {

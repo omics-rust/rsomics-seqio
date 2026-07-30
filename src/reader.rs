@@ -163,24 +163,24 @@ impl<R: BufRead> Reader<R> {
         validate_header(&self.line[1..], self.line_number)?;
         self.id.extend_from_slice(&self.line[1..]);
 
-        if !read_line(&mut self.inner, &mut self.line, &mut self.line_number)? {
-            return Err(invalid_at(
-                self.line_number,
-                "truncated FASTQ: missing sequence line",
-            ));
+        let mut sequence_lines = 0u64;
+        loop {
+            if !read_line(&mut self.inner, &mut self.line, &mut self.line_number)? {
+                let message = if sequence_lines == 0 {
+                    "truncated FASTQ: missing sequence line"
+                } else {
+                    "truncated FASTQ: missing '+' separator"
+                };
+                return Err(invalid_at(self.line_number, message));
+            }
+            if sequence_lines > 0 && self.line.first() == Some(&b'+') {
+                break;
+            }
+            validate_sequence(&self.line, self.line_number)?;
+            self.seq.extend_from_slice(&self.line);
+            sequence_lines += 1;
         }
-        validate_sequence(&self.line, self.line_number)?;
-        self.seq.extend_from_slice(&self.line);
 
-        if !read_line(&mut self.inner, &mut self.line, &mut self.line_number)? {
-            return Err(invalid_at(
-                self.line_number,
-                "truncated FASTQ: missing '+' separator",
-            ));
-        }
-        if self.line.first() != Some(&b'+') {
-            return Err(invalid_at(self.line_number, "expected FASTQ '+' separator"));
-        }
         if self.line.len() > 1 && self.line[1..] != self.id {
             return Err(invalid_at(
                 self.line_number,
@@ -188,24 +188,47 @@ impl<R: BufRead> Reader<R> {
             ));
         }
 
-        if !read_line(&mut self.inner, &mut self.line, &mut self.line_number)? {
-            return Err(invalid_at(
-                self.line_number,
-                "truncated FASTQ: missing quality line",
-            ));
-        }
-        validate_quality(&self.line, self.line_number)?;
-        self.qual.extend_from_slice(&self.line);
+        let mut quality_lines = 0u64;
+        loop {
+            if !read_line(&mut self.inner, &mut self.line, &mut self.line_number)? {
+                let message = if quality_lines == 0 {
+                    "truncated FASTQ: missing quality line".to_owned()
+                } else {
+                    format!(
+                        "truncated FASTQ quality: expected {} bytes, got {}",
+                        self.seq.len(),
+                        self.qual.len()
+                    )
+                };
+                return Err(invalid_at(self.line_number, &message));
+            }
+            validate_quality(&self.line, self.line_number)?;
+            let quality_length = self
+                .qual
+                .len()
+                .checked_add(self.line.len())
+                .ok_or_else(|| {
+                    invalid_at(
+                        self.line_number,
+                        "FASTQ quality length exceeds addressable capacity",
+                    )
+                })?;
+            if quality_length > self.seq.len() {
+                return Err(invalid_at(
+                    self.line_number,
+                    &format!(
+                        "FASTQ quality is longer than sequence: {} vs {}",
+                        quality_length,
+                        self.seq.len()
+                    ),
+                ));
+            }
+            self.qual.extend_from_slice(&self.line);
+            quality_lines += 1;
 
-        if self.seq.len() != self.qual.len() {
-            return Err(invalid_at(
-                self.line_number,
-                &format!(
-                    "FASTQ sequence/quality length mismatch: {} vs {}",
-                    self.seq.len(),
-                    self.qual.len()
-                ),
-            ));
+            if self.qual.len() == self.seq.len() {
+                break;
+            }
         }
 
         Ok(true)
@@ -342,12 +365,17 @@ mod tests {
     }
 
     #[test]
-    fn wrapped_fastq_is_rejected() {
-        let mut reader = Reader::new(Cursor::new(b"@r1\nAC\nGT\n+\nIIII\n"), Format::Fastq);
-        assert!(matches!(
-            reader.read_record(),
-            Err(RsomicsError::InvalidInput(_))
-        ));
+    fn wrapped_fastq_sequence_and_quality_are_accumulated() {
+        let mut reader = Reader::new(
+            Cursor::new(b"@r1\nAC\nGT\n+r1\nII\nII\n@r2\nTGCA\n+\nFFFF\n"),
+            Format::Fastq,
+        );
+        let first = reader.read_record().unwrap().unwrap().to_owned();
+        assert_eq!(first.id, b"r1");
+        assert_eq!(first.seq, b"ACGT");
+        assert_eq!(first.qual, Some(b"IIII".to_vec()));
+        assert_eq!(reader.read_record().unwrap().unwrap().id, b"r2");
+        assert!(reader.read_record().unwrap().is_none());
     }
 
     #[test]
@@ -366,6 +394,21 @@ mod tests {
             reader.read_record(),
             Err(RsomicsError::InvalidInput(_))
         ));
+    }
+
+    #[test]
+    fn overlong_wrapped_fastq_quality_is_rejected_immediately() {
+        let mut reader = Reader::new(Cursor::new(b"@r1\nAC\nGT\n+\nII\nIII\n"), Format::Fastq);
+        let error = reader.read_record().unwrap_err();
+        assert!(error.to_string().contains("longer than sequence"));
+    }
+
+    #[test]
+    fn first_sequence_line_may_begin_with_plus() {
+        let mut reader = Reader::new(Cursor::new(b"@r1\n+ACG\n+\nIIII\n"), Format::Fastq);
+        let record = reader.read_record().unwrap().unwrap();
+        assert_eq!(record.seq, b"+ACG");
+        assert_eq!(record.qual, Some(b"IIII".as_slice()));
     }
 
     #[test]
@@ -427,6 +470,32 @@ mod tests {
                 reader.read_record(),
                 Err(RsomicsError::InvalidInput(_))
             ));
+        }
+    }
+
+    #[test]
+    fn headers_accept_tab_but_reject_other_controls_and_non_ascii() {
+        for (format, input) in [
+            (Format::Fasta, b">one\tdescription\nACGT\n".as_slice()),
+            (
+                Format::Fastq,
+                b"@one\tdescription\nACGT\n+one\tdescription\nIIII\n".as_slice(),
+            ),
+        ] {
+            let mut reader = Reader::new(Cursor::new(input), format);
+            assert_eq!(
+                reader.read_record().unwrap().unwrap().id,
+                b"one\tdescription"
+            );
+        }
+
+        for invalid in [
+            b">one\x0bdescription\nACGT\n".as_slice(),
+            b">one\x7fdescription\nACGT\n",
+            b">one\x80description\nACGT\n",
+        ] {
+            let mut reader = Reader::new(Cursor::new(invalid), Format::Fasta);
+            assert!(reader.read_record().is_err());
         }
     }
 

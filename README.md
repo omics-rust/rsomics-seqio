@@ -40,9 +40,12 @@ record type.
 
 - FASTA supports multiline sequences and requires a non-empty identifier and
   at least one non-empty sequence line.
-- FASTQ is exactly four lines per record. Repeated identifiers after `+` must
-  match, qualities must be printable Phred ASCII, and sequence and quality
-  lengths must match.
+- FASTQ accepts single-line or wrapped sequence and quality bodies. The `+`
+  separator ends the sequence body; quality lines are accumulated until their
+  byte count exactly equals the sequence length. Repeated identifiers after
+  `+` must match, and short, overlong, or truncated qualities are errors.
+- Headers accept printable ASCII plus TAB. CR and LF remain line boundaries;
+  other controls and non-ASCII bytes are rejected.
 - Sequence bytes must be printable, non-space ASCII (`!` through `~`). This
   includes common biological symbols such as letters, `-`, `.`, `*`, and `?`,
   while rejecting spaces, NUL, DEL, other ASCII controls, and non-ASCII bytes.
