@@ -6,8 +6,8 @@ use crossbeam_channel::{Receiver, bounded};
 use flate2::read::MultiGzDecoder;
 use rsomics_common::{Result, RsomicsError};
 
-const DECODE_BUFFER: usize = 8 * 1024 * 1024;
-const CHANNEL_DEPTH: usize = 4;
+const DECODE_BUFFER: usize = 1024 * 1024;
+const CHANNEL_DEPTH: usize = 2;
 
 pub(crate) struct GzipStream {
     receiver: Receiver<std::io::Result<Vec<u8>>>,
