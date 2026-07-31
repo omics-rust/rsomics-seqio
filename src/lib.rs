@@ -22,8 +22,8 @@ use detect::{CompressionKind, ReplayReader};
 use reader_gz::GzipStream;
 
 pub use reader::Reader;
-pub use record::{LegacyFastqRecord, OwnedRecord, Record};
-pub use writer::{Writer, create_path};
+pub use record::{OwnedRecord, Record};
+pub use writer::Writer;
 
 const INPUT_BUFFER: usize = 256 * 1024;
 
@@ -31,12 +31,6 @@ const INPUT_BUFFER: usize = 256 * 1024;
 pub enum Format {
     Fasta,
     Fastq,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Compression {
-    Plain,
-    Gzip { level: u32 },
 }
 
 enum GenericInput<R: Read> {
@@ -64,10 +58,6 @@ fn decode_reader<R: Read>(source: R) -> Result<BufReader<GenericInput<R>>> {
 
 pub fn open_reader<R: Read>(source: R) -> Result<Reader<impl BufRead>> {
     Reader::detect(decode_reader(source)?)
-}
-
-pub fn open_reader_with_format<R: Read>(source: R, format: Format) -> Result<Reader<impl BufRead>> {
-    Ok(Reader::new(decode_reader(source)?, format))
 }
 
 enum PathInput {
@@ -119,50 +109,6 @@ pub fn open_path(path: &Path) -> Result<PathReader> {
     };
     let inner = Reader::detect(BufReader::with_capacity(INPUT_BUFFER, input))?;
     Ok(PathReader { inner })
-}
-
-pub struct LegacyFastqSource {
-    inner: PathReader,
-    done: bool,
-}
-
-impl Iterator for LegacyFastqSource {
-    type Item = Result<LegacyFastqRecord>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
-        match self.inner.read_record() {
-            Ok(Some(record)) => Some(Ok(LegacyFastqRecord {
-                id: record.id.to_vec(),
-                seq: record.seq.to_vec(),
-                qual: record
-                    .qual
-                    .expect("LegacyFastqSource only wraps FASTQ readers")
-                    .to_vec(),
-            })),
-            Ok(None) => {
-                self.done = true;
-                None
-            }
-            Err(error) => {
-                self.done = true;
-                Some(Err(error))
-            }
-        }
-    }
-}
-
-pub fn open_fastq_legacy(path: &Path) -> Result<LegacyFastqSource> {
-    let inner = open_path(path)?;
-    if inner.format() != Format::Fastq {
-        return Err(RsomicsError::InvalidInput(format!(
-            "{} contains FASTA, not FASTQ",
-            path.display()
-        )));
-    }
-    Ok(LegacyFastqSource { inner, done: false })
 }
 
 #[cfg(test)]
@@ -314,17 +260,6 @@ mod tests {
     }
 
     #[test]
-    fn explicit_format_supports_empty_and_compressed_readers() {
-        let mut empty =
-            open_reader_with_format(Cursor::new(Vec::<u8>::new()), Format::Fastq).unwrap();
-        assert!(empty.read_record().unwrap().is_none());
-
-        let encoded = gzip_member(b">one\nACGT\n");
-        let mut gzip = open_reader_with_format(Cursor::new(encoded), Format::Fasta).unwrap();
-        assert_eq!(gzip.read_record().unwrap().unwrap().seq, b"ACGT");
-    }
-
-    #[test]
     fn path_reader_detects_content_not_extension() {
         let mut file = tempfile::Builder::new()
             .suffix(".fastq")
@@ -364,36 +299,5 @@ mod tests {
                 "path reader accepted gzip missing {missing} trailer byte(s)"
             );
         }
-    }
-
-    #[test]
-    fn legacy_fastq_adapter_has_an_explicit_name_and_shape() {
-        let mut file = tempfile::NamedTempFile::new().unwrap();
-        file.write_all(b"@one\nACGT\n+\nIIII\n").unwrap();
-        file.flush().unwrap();
-
-        let records = open_fastq_legacy(file.path())
-            .unwrap()
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        assert_eq!(
-            records,
-            vec![LegacyFastqRecord {
-                id: b"one".to_vec(),
-                seq: b"ACGT".to_vec(),
-                qual: b"IIII".to_vec(),
-            }]
-        );
-    }
-
-    #[test]
-    fn legacy_fastq_adapter_rejects_fasta() {
-        let mut file = tempfile::NamedTempFile::new().unwrap();
-        file.write_all(b">one\nACGT\n").unwrap();
-        file.flush().unwrap();
-        assert!(matches!(
-            open_fastq_legacy(file.path()),
-            Err(RsomicsError::InvalidInput(_))
-        ));
     }
 }

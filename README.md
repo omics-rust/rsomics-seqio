@@ -24,13 +24,11 @@ FASTA or FASTQ after decompression. `open_reader` provides the same transparent
 compression and format detection for a generic `Read` source. Compression
 probing consumes only the two-byte gzip magic and replays those bytes, so it is
 safe for sources that return short reads. Consumers that already know the
-format can use `open_reader_with_format`; unlike `Reader::new`, that entry
-point still performs transparent decompression.
+format can construct `Reader` directly.
 
 `Writer<W: Write>` writes canonical single-line FASTA or strict four-line
-FASTQ to any writer. `Writer::gzip` and `create_path` select compression
-without exposing the concrete backend. Call `finish` or `finish_into_inner` to
-flush the final gzip trailer.
+FASTQ to any writer. Compression and transactional file policy stay with the
+consuming product. Call `finish` or `finish_into_inner` to flush the sink.
 
 `Record::to_owned` produces the canonical `OwnedRecord`, whose optional
 quality field represents both FASTA and FASTQ without a second ambiguous owned
@@ -84,17 +82,11 @@ API compatibility:
 
 - `OwnedFastxRecord` is replaced by the canonical
   `OwnedRecord { id, seq, qual: Option<Vec<u8>> }`.
-- The old FASTQ-only `OwnedRecord { id, seq, qual: Vec<u8> }` shape is retained
-  only as the explicitly named `LegacyFastqRecord`.
-- `open_fastq` and `FastqSource` are replaced by the explicitly named
-  `open_fastq_legacy` and `LegacyFastqSource`.
 - Sequence validation is stricter and consistent between reader and writer:
   bytes outside printable non-space ASCII are rejected.
 - gzip/BGZF decoding no longer selects `rsomics-igzip` on Linux.
 
-New product code should use `open_path`, `open_reader`,
-`open_reader_with_format`, or `Reader` directly. The legacy adapter is only
-for deliberate migration of the old allocating FASTQ shape.
+New product code should use `open_path`, `open_reader`, or `Reader` directly.
 
 ## Inspected team-owned source assets
 

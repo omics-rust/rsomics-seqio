@@ -34,13 +34,6 @@ impl OwnedRecord {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LegacyFastqRecord {
-    pub id: Vec<u8>,
-    pub seq: Vec<u8>,
-    pub qual: Vec<u8>,
-}
-
 pub(crate) fn is_valid_header_byte(byte: u8) -> bool {
     byte == b'\t' || (b' '..=b'~').contains(&byte)
 }
