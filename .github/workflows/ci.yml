@@ -21,23 +21,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/checkout@v6
-        with:
-          repository: omics-rust/rsomics-common
-          ref: 9f11f37c0fa48a24cae12549769f3395d9d0f19f
-          path: target/ci/rsomics-common
       - uses: dtolnay/rust-toolchain@1.91.0
         with:
           components: clippy,rustfmt
-
-      - name: Configure unpublished foundation revision
-        run: |
-          mkdir -p "$RUNNER_TEMP/cargo-home"
-          cat > "$RUNNER_TEMP/cargo-home/config.toml" <<EOF
-          [patch.crates-io]
-          rsomics-common = { path = "$GITHUB_WORKSPACE/target/ci/rsomics-common" }
-          EOF
-          echo "CARGO_HOME=$RUNNER_TEMP/cargo-home" >> "$GITHUB_ENV"
 
       - run: cargo fmt --all -- --check
         if: matrix.runner == 'ubuntu-24.04'
