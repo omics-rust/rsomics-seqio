@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-seqio"
-version = "0.3.0"
+version = "0.4.0"
 description = "Strict allocation-reusing FASTA/FASTQ streaming I/O with transparent gzip and BGZF input"
 edition = "2024"
 rust-version = "1.91"
@@ -12,7 +12,7 @@ keywords = ["fasta", "fastq", "bioinformatics", "bgzf", "gzip"]
 readme = "README.md"
 
 [dependencies]
-rsomics-common = "0.7"
+rsomics-common = "0.11"
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 crossbeam-channel = "0.5"
 
