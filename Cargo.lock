@@ -413,9 +413,9 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rsomics-common"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a177d3bda6bd699e8f7449c0c414c64081a468dcdcfe7bc2bbacc6ff56cae1"
+checksum = "cf3e31808c6a131ab789ee4a135bf46fd3eaafb87d3dc0d264e6e620f74bc3e7"
 dependencies = [
  "clap",
  "same-file",
@@ -427,7 +427,7 @@ dependencies = [
 
 [[package]]
 name = "rsomics-seqio"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "crossbeam-channel",
