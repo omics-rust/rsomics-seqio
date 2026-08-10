@@ -6,6 +6,7 @@
 )]
 
 mod detect;
+mod output_writer;
 mod reader;
 mod reader_gz;
 mod record;
@@ -21,6 +22,7 @@ use rsomics_common::{Result, RsomicsError};
 use detect::{CompressionKind, ReplayReader};
 use reader_gz::GzipStream;
 
+pub use output_writer::{Compression, OutputWriter};
 pub use reader::Reader;
 pub use record::{OwnedRecord, Record};
 pub use writer::Writer;
