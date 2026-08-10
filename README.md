@@ -37,7 +37,8 @@ record type.
 ## Validation
 
 - FASTA supports multiline sequences and requires a non-empty identifier and
-  at least one non-empty sequence line.
+  one or more sequence lines. A single empty sequence line represents an empty
+  sequence; empty lines within a non-empty sequence remain invalid.
 - FASTQ accepts single-line or wrapped sequence and quality bodies. The `+`
   separator ends the sequence body; quality lines are accumulated until their
   byte count exactly equals the sequence length. Repeated identifiers after
@@ -47,8 +48,8 @@ record type.
 - Sequence bytes must be printable, non-space ASCII (`!` through `~`). This
   includes common biological symbols such as letters, `-`, `.`, `*`, and `?`,
   while rejecting spaces, NUL, DEL, other ASCII controls, and non-ASCII bytes.
-- Empty FASTQ sequence and quality lines are accepted when both lengths are
-  zero. FASTA still requires at least one non-empty sequence line.
+- Empty FASTA sequences and matching empty FASTQ sequence and quality lines are
+  accepted.
 - CRLF and LF inputs are normalized.
 - Empty input is clean EOF when the caller supplied a `Format`; automatic
   format detection rejects it because no format can be inferred.

@@ -96,13 +96,7 @@ fn validate_record(record: Record<'_>, format: Format) -> Result<()> {
     }
 
     match (format, record.qual) {
-        (Format::Fasta, None) => {
-            if record.seq.is_empty() {
-                return Err(RsomicsError::InvalidInput(
-                    "FASTA sequence must not be empty".into(),
-                ));
-            }
-        }
+        (Format::Fasta, None) => {}
         (Format::Fasta, Some(_)) => {
             return Err(RsomicsError::InvalidInput(
                 "cannot write quality scores in FASTA format".into(),
@@ -158,6 +152,24 @@ mod tests {
         assert_eq!(record.id, b"one");
         assert_eq!(record.seq, b"ACGT");
         assert!(record.qual.is_none());
+    }
+
+    #[test]
+    fn empty_fasta_sequence_round_trips() {
+        let mut output = Vec::new();
+        let mut writer = Writer::new(&mut output, Format::Fasta);
+        writer
+            .write_record(Record {
+                id: b"empty",
+                seq: b"",
+                qual: None,
+            })
+            .unwrap();
+        writer.finish().unwrap();
+
+        let mut reader = Reader::new(Cursor::new(&output), Format::Fasta);
+        assert!(reader.read_record().unwrap().unwrap().seq.is_empty());
+        assert!(reader.read_record().unwrap().is_none());
     }
 
     #[test]

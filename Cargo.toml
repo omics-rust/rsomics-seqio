@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-seqio"
-version = "0.5.0"
+version = "0.5.1"
 description = "Strict allocation-reusing FASTA/FASTQ streaming I/O with transparent gzip and BGZF input"
 edition = "2024"
 rust-version = "1.91"

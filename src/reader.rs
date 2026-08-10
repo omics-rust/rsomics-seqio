@@ -126,6 +126,9 @@ impl<R: BufRead> Reader<R> {
                 break;
             }
             if self.line.is_empty() {
+                if sequence_lines == 0 {
+                    return Ok(true);
+                }
                 return Err(invalid_at(
                     self.line_number,
                     "empty line inside FASTA sequence",
@@ -449,6 +452,19 @@ mod tests {
         let record = reader.read_record().unwrap().unwrap();
         assert!(record.seq.is_empty());
         assert_eq!(record.qual, Some(b"".as_slice()));
+    }
+
+    #[test]
+    fn empty_fasta_record_is_distinct_from_an_internal_blank_line() {
+        let mut empty = Reader::new(Cursor::new(b">empty\n\n>next\nAC\n"), Format::Fasta);
+        assert!(empty.read_record().unwrap().unwrap().seq.is_empty());
+        assert_eq!(empty.read_record().unwrap().unwrap().seq, b"AC");
+
+        let mut malformed = Reader::new(Cursor::new(b">one\nAC\n\n"), Format::Fasta);
+        assert!(matches!(
+            malformed.read_record(),
+            Err(RsomicsError::InvalidInput(_))
+        ));
     }
 
     #[test]
