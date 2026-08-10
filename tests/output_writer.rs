@@ -1,6 +1,8 @@
 use std::io::{self, Cursor, Write};
 
-use rsomics_seqio::{Compression, Format, OutputWriter, Record, open_reader};
+use rsomics_seqio::{
+    Compression, Format, OutputEncoder, OutputWriter, Record, Writer, open_reader,
+};
 
 const BGZF_EOF: &[u8] = &[
     0x1f, 0x8b, 0x08, 0x04, 0, 0, 0, 0, 0, 0xff, 6, 0, b'B', b'C', 2, 0, 0x1b, 0, 3, 0, 0, 0, 0, 0,
@@ -19,6 +21,26 @@ fn plain_output_returns_the_caller_stream() {
         .unwrap();
 
     assert_eq!(writer.finish().unwrap(), b">read-1\nACGT\n");
+}
+
+#[test]
+fn output_encoder_composes_with_the_existing_writer() {
+    let encoder = OutputEncoder::new(Vec::new(), Compression::Bgzf { level: 6 }).unwrap();
+    let mut writer = Writer::new(encoder, Format::Fasta);
+    writer
+        .write_record(Record {
+            id: b"read-1",
+            seq: b"ACGT",
+            qual: None,
+        })
+        .unwrap();
+
+    let encoder = writer.finish_into_inner().unwrap();
+    let encoded = encoder.finish().unwrap();
+    let mut reader = open_reader(Cursor::new(encoded)).unwrap();
+    let record = reader.read_record().unwrap().unwrap();
+    assert_eq!(record.id, b"read-1");
+    assert_eq!(record.seq, b"ACGT");
 }
 
 #[test]

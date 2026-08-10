@@ -12,15 +12,20 @@ pub enum Compression {
     Bgzf { level: u8 },
 }
 
+/// A plain or BGZF byte-stream encoder over a caller-owned destination.
+pub struct OutputEncoder<W: Write> {
+    inner: Encoder<W>,
+}
+
 enum Encoder<W: Write> {
     Plain(W),
     Bgzf(BgzfWriter<W>),
 }
 
-impl<W: Write> Encoder<W> {
-    fn new(inner: W, compression: Compression) -> Result<Self> {
-        match compression {
-            Compression::Plain => Ok(Self::Plain(inner)),
+impl<W: Write> OutputEncoder<W> {
+    pub fn new(inner: W, compression: Compression) -> Result<Self> {
+        let inner = match compression {
+            Compression::Plain => Encoder::Plain(inner),
             Compression::Bgzf { level } => {
                 if level > 9 {
                     return Err(RsomicsError::InvalidInput(format!(
@@ -31,48 +36,49 @@ impl<W: Write> Encoder<W> {
                 let writer = writer::Builder::default()
                     .set_compression_level(level)
                     .build_from_writer(inner);
-                Ok(Self::Bgzf(writer))
+                Encoder::Bgzf(writer)
             }
-        }
+        };
+        Ok(Self { inner })
     }
 
-    fn finish(self) -> Result<W> {
-        match self {
-            Self::Plain(mut inner) => {
+    pub fn finish(self) -> Result<W> {
+        match self.inner {
+            Encoder::Plain(mut inner) => {
                 inner.flush().map_err(RsomicsError::Io)?;
                 Ok(inner)
             }
-            Self::Bgzf(inner) => inner.finish().map_err(RsomicsError::Io),
+            Encoder::Bgzf(inner) => inner.finish().map_err(RsomicsError::Io),
         }
     }
 }
 
-impl<W: Write> Write for Encoder<W> {
+impl<W: Write> Write for OutputEncoder<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self {
-            Self::Plain(inner) => inner.write(buf),
-            Self::Bgzf(inner) => inner.write(buf),
+        match &mut self.inner {
+            Encoder::Plain(inner) => inner.write(buf),
+            Encoder::Bgzf(inner) => inner.write(buf),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        match self {
-            Self::Plain(inner) => inner.flush(),
-            Self::Bgzf(inner) => inner.flush(),
+        match &mut self.inner {
+            Encoder::Plain(inner) => inner.flush(),
+            Encoder::Bgzf(inner) => inner.flush(),
         }
     }
 }
 
 /// A strict FASTA/FASTQ writer with explicit stream finalization.
 pub struct OutputWriter<W: Write> {
-    inner: Writer<Encoder<W>>,
+    inner: Writer<OutputEncoder<W>>,
 }
 
 impl<W: Write> OutputWriter<W> {
     /// Creates a writer over a caller-owned destination.
     pub fn new(inner: W, format: Format, compression: Compression) -> Result<Self> {
         Ok(Self {
-            inner: Writer::new(Encoder::new(inner, compression)?, format),
+            inner: Writer::new(OutputEncoder::new(inner, compression)?, format),
         })
     }
 

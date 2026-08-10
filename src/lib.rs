@@ -22,7 +22,7 @@ use rsomics_common::{Result, RsomicsError};
 use detect::{CompressionKind, ReplayReader};
 use reader_gz::GzipStream;
 
-pub use output_writer::{Compression, OutputWriter};
+pub use output_writer::{Compression, OutputEncoder, OutputWriter};
 pub use reader::Reader;
 pub use record::{OwnedRecord, Record};
 pub use writer::Writer;
