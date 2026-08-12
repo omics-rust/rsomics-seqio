@@ -86,6 +86,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
 
 [[package]]
+name = "bstr"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bb31b46c14244e20ee9984b11bf5c992b91fb6939fea616e3512c8baecdbe5f"
+dependencies = [
+ "memchr",
+ "serde_core",
+]
+
+[[package]]
 name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -384,6 +394,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "noodles-core"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8dbac7c5f9a7de9fe45590f198a09697df631cd13d2060b4742cc48144555b0"
+dependencies = [
+ "bstr",
+]
+
+[[package]]
+name = "noodles-fasta"
+version = "0.61.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0e6a772d7a5cb566196d1a1806c4471ad63bc6ffad5b2d549e9602708a9aaab"
+dependencies = [
+ "bstr",
+ "memchr",
+ "noodles-bgzf",
+ "noodles-core",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,6 +516,8 @@ dependencies = [
  "crossbeam-channel",
  "flate2",
  "noodles-bgzf",
+ "noodles-core",
+ "noodles-fasta",
  "rsomics-common",
  "tempfile",
 ]

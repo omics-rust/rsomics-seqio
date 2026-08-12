@@ -16,6 +16,8 @@ rsomics-common = "0.12"
 flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
 crossbeam-channel = "0.5"
 noodles-bgzf = { version = "0.47", features = ["libdeflate"] }
+noodles-core = "0.20"
+noodles-fasta = "0.61"
 
 [dev-dependencies]
 tempfile = "3"

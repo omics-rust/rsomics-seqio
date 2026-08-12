@@ -6,6 +6,7 @@
 )]
 
 mod detect;
+mod indexed_fasta;
 mod output_writer;
 mod reader;
 mod reader_gz;
@@ -22,6 +23,7 @@ use rsomics_common::{Result, RsomicsError};
 use detect::{CompressionKind, ReplayReader};
 use reader_gz::GzipStream;
 
+pub use indexed_fasta::IndexedFasta;
 pub use output_writer::{Compression, OutputEncoder, OutputWriter};
 pub use reader::Reader;
 pub use record::{OwnedRecord, Record};

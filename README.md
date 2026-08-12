@@ -34,6 +34,12 @@ consuming product. Call `finish` or `finish_into_inner` to flush the sink.
 quality field represents both FASTA and FASTQ without a second ambiguous owned
 record type.
 
+`IndexedFasta` reads zero-based half-open ranges by reference name from a
+plain or BGZF FASTA with `.fai` and, for BGZF, `.gzi` indexes. Its bounded
+cache owns one reference window and returns borrowed sequence slices. Invalid
+names, ranges, indexes, and truncated sequence data retain the source path in
+the error.
+
 ## Validation
 
 - FASTA supports multiline sequences and requires a non-empty identifier and
