@@ -32,27 +32,31 @@ impl IndexedFasta {
         let reader = fasta::io::indexed_reader::Builder::default()
             .build_from_path(path)
             .rs_with_context(|| format!("opening indexed FASTA {}", path.display()))?;
-        let references = reader
-            .index()
-            .as_ref()
-            .iter()
-            .map(|record| {
-                usize::try_from(record.length())
-                    .map(|length| (record.name().to_vec().into_boxed_slice(), length))
-                    .map_err(|_| {
-                        RsomicsError::InvalidInput(format!(
-                            "indexed FASTA {} reference {} exceeds addressable length",
-                            path.display(),
-                            String::from_utf8_lossy(record.name())
-                        ))
-                    })
-            })
-            .collect::<Result<Vec<_>>>()?
-            .into_boxed_slice();
+        let mut references = Vec::new();
+        for record in reader.index().as_ref() {
+            if references
+                .iter()
+                .any(|(name, _): &(Box<[u8]>, usize)| name.as_ref() == record.name())
+            {
+                return Err(RsomicsError::InvalidInput(format!(
+                    "indexed FASTA {} has duplicate reference {}",
+                    path.display(),
+                    String::from_utf8_lossy(record.name())
+                )));
+            }
+            let length = usize::try_from(record.length()).map_err(|_| {
+                RsomicsError::InvalidInput(format!(
+                    "indexed FASTA {} reference {} exceeds addressable length",
+                    path.display(),
+                    String::from_utf8_lossy(record.name())
+                ))
+            })?;
+            references.push((record.name().to_vec().into_boxed_slice(), length));
+        }
         Ok(Self {
             reader,
             path: path.to_path_buf(),
-            references,
+            references: references.into_boxed_slice(),
             cache_capacity,
             cached_name: Box::default(),
             cached_start: 0,

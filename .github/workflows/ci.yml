@@ -34,3 +34,5 @@ jobs:
       - run: cargo test --locked --all-features
       - run: cargo bench --locked --bench seqio_gz -- --test
         if: matrix.runner == 'ubuntu-24.04'
+      - run: cargo bench --locked --bench indexed_fasta -- --test
+        if: matrix.runner == 'ubuntu-24.04'

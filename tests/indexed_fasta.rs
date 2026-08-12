@@ -67,3 +67,18 @@ fn bgzf_reference_uses_fai_and_gzi_indexes() {
     assert_eq!(reference.fetch(b"chr1", 4..9).unwrap(), b"ACGTA");
     assert_eq!(reference.fetch(b"chr2", 0..4).unwrap(), b"TTGG");
 }
+
+#[test]
+fn duplicate_reference_names_are_rejected() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("reference.fa");
+    fs::write(&path, b">chr1\nAC\n>chr1\nGT\n").unwrap();
+    fs::write(
+        path.with_extension("fa.fai"),
+        b"chr1\t2\t6\t2\t3\nchr1\t2\t15\t2\t3\n",
+    )
+    .unwrap();
+
+    let error = IndexedFasta::open(&path).err().unwrap().to_string();
+    assert!(error.contains("duplicate reference chr1"), "{error}");
+}

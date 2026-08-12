@@ -1,6 +1,6 @@
 [package]
 name = "rsomics-seqio"
-version = "0.5.1"
+version = "0.6.0"
 description = "Strict allocation-reusing FASTA/FASTQ streaming I/O with transparent gzip and BGZF input"
 edition = "2024"
 rust-version = "1.91"
@@ -25,4 +25,8 @@ criterion = { version = "0.7", default-features = false, features = ["cargo_benc
 
 [[bench]]
 name = "seqio_gz"
+harness = false
+
+[[bench]]
+name = "indexed_fasta"
 harness = false

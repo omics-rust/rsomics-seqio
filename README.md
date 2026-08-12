@@ -40,6 +40,14 @@ cache owns one reference window and returns borrowed sequence slices. Invalid
 names, ranges, indexes, and truncated sequence data retain the source path in
 the error.
 
+The indexed-reference benchmark uses a 4 MiB, 80-base-line FASTA with SHA-256
+`5028b1f49520f86bce38a3ad0bc1a4df5bc611e76f4c75d1a63091a5d762aed1`.
+On an Apple M2 Mac mini with 8 GB RAM and arm64 macOS 26.6.1 build 25G76, a
+repeated cached 64-base range took 8.64–9.03 ns, while the equivalent direct
+noodles indexed query took 1.22–1.51 µs. The committed Criterion benchmark
+generates both inputs and measures the shared API against its uncached
+underlying reader.
+
 ## Validation
 
 - FASTA supports multiline sequences and requires a non-empty identifier and
